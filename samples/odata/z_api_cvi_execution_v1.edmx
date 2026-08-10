@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Sample OData V4 service metadata for the CVI/MDS Note Execution API.
+  This is exposed on SAP BTP ABAP Environment via a RAP behaviour
+  definition + service definition, or on the Node.js/Java BTP side
+  proxied via the AI Agent.
+-->
+<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+  <edmx:DataServices>
+    <Schema Namespace="ZCVIAuto" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+
+      <EntityType Name="Execution">
+        <Key><PropertyRef Name="ExecutionId"/></Key>
+        <Property Name="ExecutionId"            Type="Edm.String"           Nullable="false"/>
+        <Property Name="SystemType"             Type="Edm.String"           MaxLength="10"/>
+        <Property Name="SystemTier"             Type="Edm.String"           MaxLength="10"/>
+        <Property Name="Status"                 Type="Edm.String"           MaxLength="40"/>
+        <Property Name="RequestedBy"            Type="Edm.String"           MaxLength="120"/>
+        <Property Name="StartedAt"              Type="Edm.DateTimeOffset"/>
+        <Property Name="FinishedAt"             Type="Edm.DateTimeOffset"/>
+        <Property Name="ErrorSummary"           Type="Edm.String"/>
+        <Property Name="RollbackRecommendation" Type="Edm.String"/>
+        <NavigationProperty Name="Notes"          Type="Collection(ZCVIAuto.Note)"/>
+        <NavigationProperty Name="Transports"     Type="Collection(ZCVIAuto.Transport)"/>
+        <NavigationProperty Name="CockpitResult"  Type="ZCVIAuto.CockpitResult"/>
+      </EntityType>
+
+      <EntityType Name="Note">
+        <Key><PropertyRef Name="NoteNumber"/></Key>
+        <Property Name="NoteNumber" Type="Edm.String" Nullable="false" MaxLength="10"/>
+        <Property Name="Title"      Type="Edm.String"/>
+        <Property Name="Component"  Type="Edm.String" MaxLength="40"/>
+        <Property Name="Status"     Type="Edm.String" MaxLength="20"/>
+      </EntityType>
+
+      <EntityType Name="Transport">
+        <Key><PropertyRef Name="Trkorr"/></Key>
+        <Property Name="Trkorr"      Type="Edm.String" Nullable="false" MaxLength="20"/>
+        <Property Name="Description" Type="Edm.String"/>
+        <Property Name="Owner"       Type="Edm.String" MaxLength="120"/>
+        <Property Name="Status"      Type="Edm.String" MaxLength="20"/>
+      </EntityType>
+
+      <ComplexType Name="CockpitResult">
+        <Property Name="Cockpit"     Type="Edm.String" MaxLength="30"/>
+        <Property Name="Passed"      Type="Edm.Boolean"/>
+        <Property Name="Findings"    Type="Collection(Edm.String)"/>
+        <Property Name="Remediation" Type="Collection(Edm.String)"/>
+      </ComplexType>
+
+      <Action Name="AnalyzeAndImplement" IsBound="false">
+        <Parameter Name="SystemType"  Type="Edm.String" Nullable="false"/>
+        <Parameter Name="SystemTier"  Type="Edm.String"/>
+        <Parameter Name="NoteNumbers" Type="Collection(Edm.String)"/>
+        <Parameter Name="UserPrompt"  Type="Edm.String"/>
+        <ReturnType Type="ZCVIAuto.Execution"/>
+      </Action>
+
+      <EntityContainer Name="Container">
+        <EntitySet Name="Executions" EntityType="ZCVIAuto.Execution">
+          <NavigationPropertyBinding Path="Notes"      Target="Notes"/>
+          <NavigationPropertyBinding Path="Transports" Target="Transports"/>
+        </EntitySet>
+        <EntitySet Name="Notes"      EntityType="ZCVIAuto.Note"/>
+        <EntitySet Name="Transports" EntityType="ZCVIAuto.Transport"/>
+        <ActionImport Name="AnalyzeAndImplement" Action="ZCVIAuto.AnalyzeAndImplement"/>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>

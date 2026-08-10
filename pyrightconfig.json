@@ -1,0 +1,8 @@
+{
+  "include": ["app", "run.py"],
+  "exclude": ["**/__pycache__", "data", ".venv"],
+  "reportMissingImports": "warning",
+  "reportMissingTypeStubs": false,
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "basic"
+}

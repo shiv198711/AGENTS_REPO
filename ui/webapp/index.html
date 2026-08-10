@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CVI_ERROR_R_AUTO — SAP Note Implementation Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo">◆</span>
+      <div>
+        <h1>CVI_ERROR_R_AUTO</h1>
+        <p class="tagline">
+          SAP BTP AI Agent — CVI (ECC) &amp; MDS (S/4HANA) Note Automation
+        </p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="providerBadge" class="badge">LLM: …</span>
+      <span id="modeBadge" class="badge badge-dim">Simulation Mode</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="history">Execution History</button>
+    <button class="tab" data-tab="errors">Error Dashboard</button>
+    <button class="tab" data-tab="transports">Transports</button>
+    <button class="tab" data-tab="approvals">Approvals</button>
+    <button class="tab" data-tab="prompt">AI Prompt</button>
+    <button class="tab" data-tab="audit">Audit</button>
+  </nav>
+
+  <main>
+    <!-- ================================================================ -->
+    <!-- Dashboard tab -->
+    <!-- ================================================================ -->
+    <section id="tab-dashboard" class="tab-panel active">
+      <div class="card">
+        <h2>Analyze &amp; Implement SAP Notes</h2>
+        <p class="muted">
+          Select the target system, add one or more SAP Note numbers or upload
+          note files, then click the button. The AI agent validates, analyses,
+          orchestrates SNOTE implementation and runs the appropriate cockpit
+          checks (CVI_COCKPIT for ECC, MDS_LOAD_COCKPIT for S/4HANA).
+        </p>
+
+        <div class="grid-2">
+          <div>
+            <label>Target system</label>
+            <div class="radio-row">
+              <label><input type="radio" name="system_type" value="ECC" checked /> ECC (CVI_COCKPIT)</label>
+              <label><input type="radio" name="system_type" value="S4HANA" /> S/4HANA (MDS_LOAD_COCKPIT)</label>
+            </div>
+
+            <label>System tier</label>
+            <select id="systemTier">
+              <option value="DEV" selected>DEV</option>
+              <option value="QA">QA</option>
+              <option value="PROD">PROD (requires approval)</option>
+            </select>
+
+            <label>Requested by</label>
+            <select id="requestedBy">
+              <option value="demo.developer" selected>demo.developer</option>
+              <option value="demo.operator">demo.operator</option>
+              <option value="demo.approver">demo.approver</option>
+              <option value="demo.admin">demo.admin</option>
+              <option value="demo.viewer">demo.viewer</option>
+            </select>
+
+            <label>Release transports (if authorized)</label>
+            <select id="releaseTransports">
+              <option value="false" selected>No</option>
+              <option value="true">Yes</option>
+            </select>
+          </div>
+
+          <div>
+            <label>SAP Note number(s) — comma or newline separated</label>
+            <textarea id="noteNumbers" rows="4" placeholder="3021123, 2914108"></textarea>
+
+            <label>Or upload SAP Note files (multiple allowed)</label>
+            <input type="file" id="noteFiles" multiple />
+            <div id="uploadedNotes" class="hint"></div>
+
+            <label>Additional prompt / context (optional)</label>
+            <textarea id="userPrompt" rows="3"
+              placeholder="Example: We need to fix BP replication error after upgrade to S/4HANA 2023."></textarea>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="btnAnalyzeImplement" class="btn-primary">
+            Analyze &amp; Implement SAP Notes
+          </button>
+          <button id="btnValidateOnly">Validate Only</button>
+          <button id="btnAnalyzeOnly">Analyze Only</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Live Execution Stream</h2>
+        <div class="stream-status">
+          Execution ID: <code id="execId">-</code> ·
+          Status: <span id="execStatus" class="badge">idle</span>
+        </div>
+        <pre id="execStream" class="stream"></pre>
+      </div>
+
+      <div class="card">
+        <h2>Result</h2>
+        <div id="resultSummary" class="muted">Run an analysis to see results.</div>
+        <div class="actions" id="downloadActions" style="display:none">
+          <button id="btnDownloadMd">Download .md</button>
+          <button id="btnDownloadJson">Download .json</button>
+          <button id="btnDownloadDocx">Download .docx</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="tab-history" class="tab-panel">
+      <div class="card">
+        <h2>Execution History</h2>
+        <div class="actions">
+          <button id="btnRefreshHistory">Refresh</button>
+        </div>
+        <table id="historyTable" class="datatable">
+          <thead>
+            <tr>
+              <th>ID</th><th>System</th><th>Tier</th><th>Status</th>
+              <th>Notes</th><th>Started</th><th>Finished</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tab-errors" class="tab-panel">
+      <div class="card">
+        <h2>Error Dashboard</h2>
+        <div class="actions"><button id="btnRefreshErrors">Refresh</button></div>
+        <table id="errorsTable" class="datatable">
+          <thead>
+            <tr><th>ID</th><th>System</th><th>Status</th><th>Error</th><th>Rollback</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tab-transports" class="tab-panel">
+      <div class="card">
+        <h2>Transports</h2>
+        <div class="actions"><button id="btnRefreshTransports">Refresh</button></div>
+        <table id="transportsTable" class="datatable">
+          <thead>
+            <tr>
+              <th>Transport</th><th>System</th><th>Tier</th><th>Status</th>
+              <th>Description</th><th>Execution</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tab-approvals" class="tab-panel">
+      <div class="card">
+        <h2>Pending Approvals</h2>
+        <div class="actions"><button id="btnRefreshApprovals">Refresh</button></div>
+        <table id="approvalsTable" class="datatable">
+          <thead>
+            <tr>
+              <th>ID</th><th>Execution</th><th>Tier</th><th>Requester</th>
+              <th>Status</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tab-prompt" class="tab-panel">
+      <div class="card">
+        <h2>AI Prompt</h2>
+        <p class="muted">
+          Free-form prompt to the CVI/MDS AI agent. Useful for exploring SAP
+          Note strategy, remediation ideas, or asking the agent to reason
+          before submitting an implementation.
+        </p>
+        <textarea id="promptText" rows="6"
+          placeholder="Example: Explain the impact of CVI Contact Person sync errors on Business Partner replication."></textarea>
+        <div class="actions">
+          <button id="btnSendPrompt" class="btn-primary">Send</button>
+        </div>
+        <h3>Response</h3>
+        <pre id="promptResponse" class="stream"></pre>
+      </div>
+    </section>
+
+    <section id="tab-audit" class="tab-panel">
+      <div class="card">
+        <h2>Audit Log</h2>
+        <div class="actions"><button id="btnRefreshAudit">Refresh</button></div>
+        <table id="auditTable" class="datatable">
+          <thead>
+            <tr><th>Time</th><th>Action</th><th>Actor</th><th>Execution</th><th>Outcome</th><th>Detail</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>CVI_ERROR_R_AUTO · v1.0.0 · SAP BTP AI Agent</span>
+    <span>Simulation mode by default — no live SAP calls unless explicitly enabled.</span>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

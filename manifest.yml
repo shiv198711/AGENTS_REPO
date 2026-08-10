@@ -1,0 +1,24 @@
+---
+applications:
+  - name: cvi-error-r-auto
+    memory: 512M
+    disk_quota: 1G
+    instances: 1
+    buildpacks:
+      - python_buildpack
+    command: python run.py
+    env:
+      HOST: 0.0.0.0
+      LOG_LEVEL: INFO
+      LLM_PROVIDER: aicore-anthropic
+      STUDIO_LLM_ENABLED: "true"
+      APPROVAL_REQUIRED_FOR_PROD: "true"
+      AUDIT_LOG_ENABLED: "true"
+      RBAC_ENABLED: "true"
+      # AICORE_* / SAP_* values should be supplied via `cf set-env` or a
+      # user-provided service binding — do NOT commit real credentials.
+    services:
+      - cvi-xsuaa
+      - cvi-dest
+      - cvi-conn
+      - cvi-aicore
